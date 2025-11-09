@@ -75,19 +75,15 @@ def main():
 
     try:
         while True:
-            # Update spectator to follow the car
-            # Get the vehicle's transform
+            # --- Update spectator to follow the car ---
             vehicle_transform = vehicle.get_transform()
-            # Compute a point 8m behind and 3m above the vehicle
             cam_location = vehicle_transform.transform(carla.Location(x=-8, z=3))
-            # Keep the same yaw/pitch/roll as the car
             cam_rotation = vehicle_transform.rotation
             spectator.set_transform(carla.Transform(cam_location, cam_rotation))
 
-
             # --- Read air quality from Arduino ---
             aq_value = get_air_quality(ser)
-            if aq_value:
+            if aq_value is not None:
                 print(f"Air Quality: {aq_value}")
                 if aq_value > AIR_QUALITY_THRESHOLD and not locked_out:
                     print("⚠️ Poor air quality detected — enabling autonomous safety mode.")
@@ -126,6 +122,10 @@ def main():
                     control.steer = 0.4
 
                 vehicle.apply_control(control)
+
+            clock.tick(30)
+            time.sleep(0.05)
+
 
             clock.tick(30)
 
