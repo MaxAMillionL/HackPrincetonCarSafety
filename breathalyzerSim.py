@@ -76,9 +76,14 @@ def main():
     try:
         while True:
             # Update spectator to follow the car
-            spectator.set_transform(
-                vehicle.get_transform().transform(carla.Transform(carla.Location(x=-8, z=3)))
-            )
+            # Get the vehicle's transform
+            vehicle_transform = vehicle.get_transform()
+            # Compute a point 8m behind and 3m above the vehicle
+            cam_location = vehicle_transform.transform(carla.Location(x=-8, z=3))
+            # Keep the same yaw/pitch/roll as the car
+            cam_rotation = vehicle_transform.rotation
+            spectator.set_transform(carla.Transform(cam_location, cam_rotation))
+
 
             # --- Read air quality from Arduino ---
             aq_value = get_air_quality(ser)
