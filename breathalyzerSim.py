@@ -23,14 +23,19 @@ def connect_arduino():
         return None
 
 def get_air_quality(ser):
-    if ser and ser.in_waiting > 0:
-        try:
-            line = ser.readline().decode(errors='ignore').strip()
-            if line:
-                value = int(line)
-                return value
-        except ValueError:
-            pass
+    """Read the latest air quality value from the Arduino."""
+    if not ser:
+        return None
+    try:
+        # Try to read a line, non-blocking
+        line = ser.readline().decode(errors='ignore').strip()
+        if line:
+            # Strip out non-digits so "AQ: 243" works too
+            digits = ''.join(ch for ch in line if ch.isdigit())
+            if digits:
+                return int(digits)
+    except Exception as e:
+        print(f"[Serial Error] {e}")
     return None
 
 # ====== MAIN LOGIC ======
@@ -91,7 +96,11 @@ def main():
             new_aq_value = get_air_quality(ser)
             if new_aq_value is not None:
                 aq_value = new_aq_value
-                print(f"Air Quality: {aq_value}")
+                print(f"🌫️ Air Quality: {aq_value}")
+            else:
+            # Keep last value on HUD, just skip update
+                pass
+
                 if aq_value > AIR_QUALITY_THRESHOLD and not locked_out:
                     print("⚠️ Poor air quality detected — enabling autonomous safety mode.")
                     manual_mode = False
