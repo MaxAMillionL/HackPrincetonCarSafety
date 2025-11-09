@@ -12,7 +12,7 @@ SERIAL_PORT = "COM5"          # Change to your Arduino COM port
 BAUD_RATE = 9600
 TIMEOUT = 1
 
-# ====== INITIALIZATION ======
+# ====== SERIAL HANDLING ======
 def connect_arduino():
     try:
         ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=TIMEOUT)
@@ -25,10 +25,12 @@ def connect_arduino():
 def get_air_quality(ser):
     if ser and ser.in_waiting > 0:
         try:
-            value = ser.readline().decode().strip()
-            return int(value)
-        except:
-            return None
+            line = ser.readline().decode(errors='ignore').strip()
+            if line:
+                value = int(line)
+                return value
+        except ValueError:
+            pass
     return None
 
 # ====== MAIN LOGIC ======
@@ -58,11 +60,14 @@ def main():
 
     spectator = world.get_spectator()
 
-    # Setup Pygame for manual control
+    # Setup Pygame for manual control + HUD
     pygame.init()
-    screen = pygame.display.set_mode((400, 100))
-    pygame.display.set_caption("CARLA: User Control")
+    screen = pygame.display.set_mode((400, 150))
+    pygame.display.set_caption("CARLA: User Control + Air Quality HUD")
     clock = pygame.time.Clock()
+
+    font = pygame.font.SysFont("Arial", 28, bold=True)
+    small_font = pygame.font.SysFont("Arial", 20)
 
     control = carla.VehicleControl()
     manual_mode = True
@@ -70,6 +75,7 @@ def main():
     lockout_timer = 0
 
     ser = connect_arduino()
+    aq_value = 0
 
     print("🚗 Ready for manual driving. Use W/A/S/D. ESC to quit.")
 
@@ -82,8 +88,9 @@ def main():
             spectator.set_transform(carla.Transform(cam_location, cam_rotation))
 
             # --- Read air quality from Arduino ---
-            aq_value = get_air_quality(ser)
-            if aq_value is not None:
+            new_aq_value = get_air_quality(ser)
+            if new_aq_value is not None:
+                aq_value = new_aq_value
                 print(f"Air Quality: {aq_value}")
                 if aq_value > AIR_QUALITY_THRESHOLD and not locked_out:
                     print("⚠️ Poor air quality detected — enabling autonomous safety mode.")
@@ -123,11 +130,20 @@ def main():
 
                 vehicle.apply_control(control)
 
+            # --- Draw HUD ---
+            screen.fill((20, 20, 20))
+            hud_color = (0, 255, 0) if aq_value < 200 else (255, 200, 0) if aq_value < AIR_QUALITY_THRESHOLD else (255, 80, 80)
+            text = font.render(f"Air Quality: {aq_value}", True, hud_color)
+            status = "Manual Control" if manual_mode else "Autonomous Safety Mode"
+            status_color = (100, 255, 100) if manual_mode else (255, 120, 0)
+            mode_text = small_font.render(status, True, status_color)
+
+            screen.blit(text, (40, 40))
+            screen.blit(mode_text, (40, 90))
+            pygame.display.flip()
+
             clock.tick(30)
             time.sleep(0.05)
-
-
-            clock.tick(30)
 
     finally:
         print("Cleaning up actors...")
