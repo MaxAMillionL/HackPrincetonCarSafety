@@ -6,8 +6,8 @@ import pygame
 from pygame.locals import K_ESCAPE, K_w, K_s, K_a, K_d, KEYDOWN, QUIT
 
 # ====== CONFIGURATION ======
-AIR_QUALITY_THRESHOLD = 300   # Adjust based on your sensor range
-LOCKOUT_DURATION = 10         # seconds for cooldown
+AIR_QUALITY_THRESHOLD = 200   # Lower threshold (was 300)
+LOCKOUT_DURATION = 30         # Increased cooldown duration (was 10)
 SERIAL_PORT = "COM5"          # Change to your Arduino COM port
 BAUD_RATE = 9600
 TIMEOUT = 1
@@ -96,9 +96,9 @@ def main():
             new_aq_value = get_air_quality(ser)
             if new_aq_value is not None:
                 aq_value = new_aq_value
-                print(f"🌫️ Air Quality: {aq_value}")
+                # print(f"🌫️ Air Quality: {aq_value}")
             else:
-            # Keep last value on HUD, just skip update
+                # Keep last value on HUD, just skip update
                 pass
 
                 if aq_value > AIR_QUALITY_THRESHOLD and not locked_out:
@@ -141,7 +141,7 @@ def main():
 
             # --- Draw HUD ---
             screen.fill((20, 20, 20))
-            hud_color = (0, 255, 0) if aq_value < 200 else (255, 200, 0) if aq_value < AIR_QUALITY_THRESHOLD else (255, 80, 80)
+            hud_color = (0, 255, 0) if aq_value < 150 else (255, 200, 0) if aq_value < AIR_QUALITY_THRESHOLD else (255, 80, 80)
             text = font.render(f"Air Quality: {aq_value}", True, hud_color)
             status = "Manual Control" if manual_mode else "Autonomous Safety Mode"
             status_color = (100, 255, 100) if manual_mode else (255, 120, 0)
